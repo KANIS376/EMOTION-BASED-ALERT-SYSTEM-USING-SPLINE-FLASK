@@ -1,0 +1,68 @@
+[
+    {
+        "session_id": "d71bb70e-3c40-494e-b82c-68222c0262ca",
+        "start_time": "2025-04-25T15:14:58.821623",
+        "end_time": "2025-04-25T15:15:15.381646",
+        "emotions": [
+            {
+                "timestamp": "2025-04-25T15:15:04.861137",
+                "emotion": "angry",
+                "confidence": 44.42222349908632
+            },
+            {
+                "timestamp": "2025-04-25T15:15:05.870540",
+                "emotion": "neutral",
+                "confidence": 47.96785116195679
+            },
+            {
+                "timestamp": "2025-04-25T15:15:06.864454",
+                "emotion": "neutral",
+                "confidence": 95.961993932724
+            },
+            {
+                "timestamp": "2025-04-25T15:15:07.871665",
+                "emotion": "happy",
+                "confidence": 97.54407405853271
+            },
+            {
+                "timestamp": "2025-04-25T15:15:08.860595",
+                "emotion": "happy",
+                "confidence": 99.23673281231727
+            },
+            {
+                "timestamp": "2025-04-25T15:15:09.851535",
+                "emotion": "happy",
+                "confidence": 82.71841016788362
+            },
+            {
+                "timestamp": "2025-04-25T15:15:10.842958",
+                "emotion": "sad",
+                "confidence": 63.1389319896698
+            },
+            {
+                "timestamp": "2025-04-25T15:15:12.864997",
+                "emotion": "sad",
+                "confidence": 75.2312570534638
+            }
+        ],
+        "emotion_averages": {
+            "angry": 44.42222349908632,
+            "disgust": 0.0,
+            "fear": 0.0,
+            "happy": 93.16640567957786,
+            "sad": 69.18509452156681,
+            "surprise": 0.0,
+            "neutral": 71.9649225473404
+        },
+        "warning_count": 0,
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+        "ip_address": "127.0.0.1",
+        "login_type": "signup",
+        "first_session": true,
+        "last_updated": "2025-04-25T15:15:15.383844",
+        "duration_seconds": 16.560023,
+        "duration_formatted": "0m 16s",
+        "logout_type": "normal",
+        "logout_time": "2025-04-25T15:15:15.381646"
+    }
+]

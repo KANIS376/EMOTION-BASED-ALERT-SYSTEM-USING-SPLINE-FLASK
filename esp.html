@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ESP Car Remote</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Prevent text selection */
+        * {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Joystick styles */
+        .joystick-container {
+            touch-action: none;
+        }
+        
+        .joystick {
+            transition: transform 0.1s;
+        }
+        
+        .joystick:active {
+            transform: scale(0.95);
+        }
+        
+        /* Button active states */
+        .control-btn:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+        
+        /* Status indicators */
+        .status-indicator {
+            box-shadow: 0 0 10px currentColor;
+        }
+        
+        /* Prevent scrolling */
+        body {
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        
+        /* Full height layout */
+        html, body, #app {
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <div id="app" class="flex flex-col h-full">
+        <!-- Header with connection status -->
+        <header class="bg-gray-800 py-3 px-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div id="connectionStatus" class="w-3 h-3 rounded-full bg-red-500 status-indicator"></div>
+                <span id="connectionText" class="text-sm">Disconnected</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span id="batteryLevel" class="text-sm flex items-center">
+                    <i class="fas fa-battery-three-quarters mr-1"></i> 75%
+                </span>
+                <button id="settingsBtn" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main remote control area -->
+        <main class="flex-grow flex flex-col items-center justify-center p-4">
+            <!-- Connection panel (shown when disconnected) -->
+            <div id="connectionPanel" class="w-full max-w-md bg-gray-800 rounded-xl p-6 shadow-lg">
+                <h2 class="text-xl font-bold mb-4 text-center">Connect to Car</h2>
+                
+                <div class="mb-4">
+                    <label class="block text-sm text-gray-400 mb-1">Device IP</label>
+                    <input type="text" id="deviceIp" placeholder="192.168.x.x" 
+                        class="w-full px-4 py-3 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="scanBtn" class="bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-wifi mr-2"></i> Scan
+                    </button>
+                    <button id="connectBtn" class="bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg">
+                        Connect
+                    </button>
+                </div>
+                
+                <div id="deviceList" class="mt-4 space-y-2 max-h-40 overflow-y-auto">
+                    <!-- Devices will appear here -->
+                </div>
+            </div>
+            
+            <!-- Control panel (shown when connected) -->
+            <div id="controlPanel" class="hidden w-full max-w-md">
+                <!-- Joystick control -->
+                <div class="relative w-64 h-64 mx-auto mb-8 joystick-container">
+                    <div class="absolute inset-0 bg-gray-800 rounded-full opacity-70"></div>
+                    <div id="joystick" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-blue-600 rounded-full shadow-xl cursor-move joystick"></div>
+                </div>
+                
+                <!-- Directional buttons -->
+                <div class="grid grid-cols-3 gap-3 mb-6">
+                    <div></div>
+                    <button id="forwardBtn" class="bg-gray-700 hover:bg-gray-600 text-white p-4 rounded-lg control-btn">
+                        <i class="fas fa-arrow-up text-2xl"></i>
+                    </button>
+                    <div></div>
+                    
+                    <button id="leftBtn" class="bg-gray-700 hover:bg-gray-600 text-white p-4 rounded-lg control-btn">
+                        <i class="fas fa-arrow-left text-2xl"></i>
+                    </button>
+                    <button id="stopBtn" class="bg-red-600 hover:bg-red-700 text-white p-4 rounded-lg control-btn">
+                        <i class="fas fa-stop text-2xl"></i>
+                    </button>
+                    <button id="rightBtn" class="bg-gray-700 hover:bg-gray-600 text-white p-4 rounded-lg control-btn">
+                        <i class="fas fa-arrow-right text-2xl"></i>
+                    </button>
+                    
+                    <div></div>
+                    <button id="backwardBtn" class="bg-gray-700 hover:bg-gray-600 text-white p-4 rounded-lg control-btn">
+                        <i class="fas fa-arrow-down text-2xl"></i>
+                    </button>
+                    <div></div>
+                </div>
+                
+                <!-- Speed control -->
+                <div class="bg-gray-800 rounded-xl p-4 mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm text-gray-400">Speed</span>
+                        <span id="speedValue" class="font-bold">50%</span>
+                    </div>
+                    <input type="range" id="speedSlider" min="0" max="100" value="50" 
+                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                </div>
+                
+                <!-- Additional controls -->
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="hornBtn" class="bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded-lg control-btn">
+                        <i class="fas fa-bullhorn mr-2"></i> Horn
+                    </button>
+                    <button id="lightsBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg control-btn">
+                        <i class="fas fa-lightbulb mr-2"></i> Lights
+                    </button>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Footer with status info -->
+        <footer class="bg-gray-800 py-3 px-4 text-sm">
+            <div class="flex justify-between items-center">
+                <div>
+                    <span id="currentMode" class="text-gray-400">Joystick Mode</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="currentSpeed" class="text-gray-400">Speed: 0%</span>
+                    <span id="currentDirection" class="text-gray-400">Direction: -</span>
+                </div>
+            </div>
+        </footer>
+        
+        <!-- Settings modal -->
+        <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+            <div class="bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold">Settings</h3>
+                        <button id="closeSettingsBtn" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">Control Mode</label>
+                            <select id="controlMode" class="w-full px-4 py-3 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="joystick">Joystick</option>
+                                <option value="buttons">Buttons</option>
+                                <option value="gyro">Gyroscope (Mobile)</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-1">API Endpoint</label>
+                            <input type="text" id="apiEndpoint" value="/control" 
+                                class="w-full px-4 py-3 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="enableVibration" class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-600 rounded bg-gray-700">
+                            <label for="enableVibration" class="ml-2 block text-sm text-gray-300">Enable Vibration Feedback</label>
+                        </div>
+                        
+                        <div class="pt-4 border-t border-gray-700">
+                            <button id="saveSettingsBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg">
+                                Save Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // App state
+        const state = {
+            connected: false,
+            deviceIp: '',
+            speed: 50,
+            controlMode: 'joystick',
+            batteryLevel: 75,
+            joystickActive: false,
+            joystickPos: { x: 0, y: 0 },
+            gyroActive: false
+        };
+
+        // DOM elements
+        const elements = {
+            app: document.getElementById('app'),
+            connectionPanel: document.getElementById('connectionPanel'),
+            controlPanel: document.getElementById('controlPanel'),
+            connectionStatus: document.getElementById('connectionStatus'),
+            connectionText: document.getElementById('connectionText'),
+            deviceIp: document.getElementById('deviceIp'),
+            connectBtn: document.getElementById('connectBtn'),
+            scanBtn: document.getElementById('scanBtn'),
+            deviceList: document.getElementById('deviceList'),
+            joystick: document.getElementById('joystick'),
+            forwardBtn: document.getElementById('forwardBtn'),
+            backwardBtn: document.getElementById('backwardBtn'),
+            leftBtn: document.getElementById('leftBtn'),
+            rightBtn: document.getElementById('rightBtn'),
+            stopBtn: document.getElementById('stopBtn'),
+            hornBtn: document.getElementById('hornBtn'),
+            lightsBtn: document.getElementById('lightsBtn'),
+            speedSlider: document.getElementById('speedSlider'),
+            speedValue: document.getElementById('speedValue'),
+            currentSpeed: document.getElementById('currentSpeed'),
+            currentDirection: document.getElementById('currentDirection'),
+            currentMode: document.getElementById('currentMode'),
+            batteryLevel: document.getElementById('batteryLevel'),
+            settingsBtn: document.getElementById('settingsBtn'),
+            settingsModal: document.getElementById('settingsModal'),
+            closeSettingsBtn: document.getElementById('closeSettingsBtn'),
+            saveSettingsBtn: document.getElementById('saveSettingsBtn'),
+            controlMode: document.getElementById('controlMode'),
+            apiEndpoint: document.getElementById('apiEndpoint'),
+            enableVibration: document.getElementById('enableVibration')
+        };
+
+        // Initialize the app
+        function init() {
+            // Load saved settings
+            loadSettings();
+            
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Initialize joystick
+            initJoystick();
+            
+            // Check for mobile device
+            checkMobileFeatures();
+            
+            // Simulate battery drain for demo
+            simulateBatteryDrain();
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Connection controls
+            elements.connectBtn.addEventListener('click', connectToDevice);
+            elements.scanBtn.addEventListener('click', scanNetwork);
+            
+            // Directional buttons
+            elements.forwardBtn.addEventListener('click', () => sendCommand('forward'));
+            elements.backwardBtn.addEventListener('click', () => sendCommand('backward'));
+            elements.leftBtn.addEventListener('click', () => sendCommand('left'));
+            elements.rightBtn.addEventListener('click', () => sendCommand('right'));
+            elements.stopBtn.addEventListener('click', () => sendCommand('stop'));
+            
+            // Additional controls
+            elements.hornBtn.addEventListener('click', () => sendCommand('horn'));
+            elements.lightsBtn.addEventListener('click', () => sendCommand('lights'));
+            
+            // Speed control
+            elements.speedSlider.addEventListener('input', updateSpeed);
+            
+            // Settings
+            elements.settingsBtn.addEventListener('click', () => elements.settingsModal.classList.remove('hidden'));
+            elements.closeSettingsBtn.addEventListener('click', () => elements.settingsModal.classList.add('hidden'));
+            elements.saveSettingsBtn.addEventListener('click', saveSettings);
+            
+            // Keyboard controls
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+        }
+
+        // Initialize joystick controls
+        function initJoystick() {
+            const joystickArea = elements.joystick.parentElement;
+            const areaRect = joystickArea.getBoundingClientRect();
+            const centerX = areaRect.width / 2;
+            const centerY = areaRect.height / 2;
+            const radius = areaRect.width / 2 - 40;
+            
+            // Position joystick at center
+            elements.joystick.style.left = `${centerX - 40}px`;
+            elements.joystick.style.top = `${centerY - 40}px`;
+            
+            // Touch events
+            elements.joystick.addEventListener('touchstart', handleJoystickStart);
+            document.addEventListener('touchmove', handleJoystickMove);
+            document.addEventListener('touchend', handleJoystickEnd);
+            
+            // Mouse events
+            elements.joystick.addEventListener('mousedown', handleJoystickStart);
+            document.addEventListener('mousemove', handleJoystickMove);
+            document.addEventListener('mouseup', handleJoystickEnd);
+        }
+
+        function handleJoystickStart(e) {
+            e.preventDefault();
+            state.joystickActive = true;
+            elements.joystick.style.transition = 'none';
+            
+            // Vibrate on mobile if enabled
+            if (state.enableVibration && navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+
+        function handleJoystickMove(e) {
+            if (!state.joystickActive || state.controlMode !== 'joystick') return;
+            e.preventDefault();
+            
+            const joystickArea = elements.joystick.parentElement;
+            const areaRect = joystickArea.getBoundingClientRect();
+            const centerX = areaRect.left + areaRect.width / 2;
+            const centerY = areaRect.top + areaRect.height / 2;
+            
+            let clientX, clientY;
+            
+            if (e.type.includes('touch')) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            
+            // Calculate position relative to center
+            let x = clientX - centerX;
+            let y = clientY - centerY;
+            
+            // Limit to joystick area radius
+            const radius = areaRect.width / 2 - 40;
+            const distance = Math.sqrt(x * x + y * y);
+            
+            if (distance > radius) {
+                x = (x / distance) * radius;
+                y = (y / distance) * radius;
+            }
+            
+            // Update joystick position
+            elements.joystick.style.left = `${centerX + x - areaRect.left - 40}px`;
+            elements.joystick.style.top = `${centerY + y - areaRect.top - 40}px`;
+            
+            // Normalize values (-1 to 1)
+            state.joystickPos.x = x / radius;
+            state.joystickPos.y = y / radius;
+            
+            // Send command based on joystick position
+            sendJoystickCommand();
+        }
+
+        function handleJoystickEnd(e) {
+            if (!state.joystickActive) return;
+            e.preventDefault();
+            
+            state.joystickActive = false;
+            elements.joystick.style.transition = 'all 0.3s ease';
+            
+            // Return to center
+            const joystickArea = elements.joystick.parentElement;
+            const areaRect = joystickArea.getBoundingClientRect();
+            const centerX = areaRect.width / 2 - 40;
+            const centerY = areaRect.height / 2 - 40;
+            
+            elements.joystick.style.left = `${centerX}px`;
+            elements.joystick.style.top = `${centerY}px`;
+            
+            // Reset values
+            state.joystickPos.x = 0;
+            state.joystickPos.y = 0;
+            
+            // Send stop command
+            if (state.controlMode === 'joystick') {
+                sendCommand('stop');
+            }
+        }
+
+        function sendJoystickCommand() {
+            const threshold = 0.3;
+            let command = 'stop';
+            
+            if (Math.abs(state.joystickPos.y) > threshold) {
+                if (state.joystickPos.y < 0) {
+                    command = 'forward';
+                } else {
+                    command = 'backward';
+                }
+            }
+            
+            if (Math.abs(state.joystickPos.x) > threshold) {
+                if (state.joystickPos.x < 0) {
+                    command = command === 'stop' ? 'left' : (command === 'forward' ? 'forward_left' : 'backward_left');
+                } else {
+                    command = command === 'stop' ? 'right' : (command === 'forward' ? 'forward_right' : 'backward_right');
+                }
+            }
+            
+            sendCommand(command);
+        }
+
+        // Connect to device
+        function connectToDevice() {
+            const ip = elements.deviceIp.value.trim();
+            
+            if (!ip) {
+                showAlert('Please enter a valid IP address', 'error');
+                return;
+            }
+            
+            // Validate IP format (simple validation)
+            if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) {
+                showAlert('Invalid IP address format', 'error');
+                return;
+            }
+            
+            // Show loading state
+            elements.connectBtn.disabled = true;
+            elements.connectBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Connecting...';
+            
+            // In a real app, you would verify the connection
+            // For demo, simulate connection with timeout
+            setTimeout(() => {
+                state.connected = true;
+                state.deviceIp = ip;
+                
+                updateConnectionStatus();
+                
+                // Hide connection panel, show controls
+                elements.connectionPanel.classList.add('hidden');
+                elements.controlPanel.classList.remove('hidden');
+                
+                // Reset button state
+                elements.connectBtn.disabled = false;
+                elements.connectBtn.textContent = 'Connect';
+                
+                showAlert(`Connected to ${ip}`, 'success');
+                
+                // Start sending periodic status updates
+                startStatusUpdates();
+            }, 1500);
+        }
+
+        // Scan network for devices
+        function scanNetwork() {
+            // Show loading state
+            elements.scanBtn.disabled = true;
+            elements.scanBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scanning...';
+            elements.deviceList.innerHTML = '<div class="text-center py-4 text-gray-400">Scanning network...</div>';
+            
+            // In a real app, you would scan the network for ESP devices
+            // For demo, simulate found devices
+            setTimeout(() => {
+                const devices = [
+                    { name: 'ESP8266-Car', ip: '192.168.1.101', signal: 90 },
+                    { name: 'ESP32-Robot', ip: '192.168.1.102', signal: 75 },
+                    { name: 'ESP8266-Demo', ip: '192.168.1.103', signal: 60 }
+                ];
+                
+                updateDeviceList(devices);
+                
+                elements.scanBtn.disabled = false;
+                elements.scanBtn.innerHTML = '<i class="fas fa-wifi mr-2"></i> Scan';
+            }, 2000);
+        }
+
+        // Update device list with found devices
+        function updateDeviceList(devices) {
+            if (devices.length === 0) {
+                elements.deviceList.innerHTML = '<div class="text-center py-4 text-gray-400">No devices found</div>';
+                return;
+            }
+            
+            elements.deviceList.innerHTML = '';
+            
+            devices.forEach(device => {
+                const deviceElement = document.createElement('div');
+                deviceElement.className = 'flex justify-between items-center p-3 bg-gray-700 rounded-lg mb-2 cursor-pointer hover:bg-gray-600';
+                deviceElement.innerHTML = `
+                    <div>
+                        <div class="font-medium">${device.name}</div>
+                        <div class="text-sm text-gray-400">${device.ip}</div>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-16 h-2 bg-gray-600 rounded-full mr-2">
+                            <div class="h-2 rounded-full ${device.signal > 70 ? 'bg-green-500' : device.signal > 40 ? 'bg-yellow-500' : 'bg-red-500'}" 
+                                style="width: ${device.signal}%"></div>
+                        </div>
+                        <span class="text-xs">${device.signal}%</span>
+                    </div>
+                `;
+                
+                deviceElement.addEventListener('click', () => {
+                    elements.deviceIp.value = device.ip;
+                });
+                
+                elements.deviceList.appendChild(deviceElement);
+            });
+        }
+
+        // Send command to device
+        function sendCommand(command) {
+            if (!state.connected) {
+                showAlert('Not connected to any device', 'error');
+                return;
+            }
+            
+            // Update UI
+            elements.currentDirection.textContent = getDirectionText(command);
+            elements.currentSpeed.textContent = `Speed: ${command === 'stop' ? '0' : state.speed}%`;
+            
+            // In a real app, you would send the command to the ESP device
+            // Example: fetch(`http://${state.deviceIp}${state.apiEndpoint}?command=${command}&speed=${state.speed}`)
+            console.log(`Sending to ${state.deviceIp}: ${command} at ${state.speed}% speed`);
+            
+            // Vibrate on mobile if enabled
+            if (state.enableVibration && navigator.vibrate) {
+                navigator.vibrate(20);
+            }
+        }
+
+        function getDirectionText(command) {
+            switch(command) {
+                case 'forward': return 'Forward';
+                case 'backward': return 'Backward';
+                case 'left': return 'Left';
+                case 'right': return 'Right';
+                case 'forward_left': return 'Forward Left';
+                case 'forward_right': return 'Forward Right';
+                case 'backward_left': return 'Backward Left';
+                case 'backward_right': return 'Backward Right';
+                case 'stop': return 'Stopped';
+                case 'horn': return 'Horn';
+                case 'lights': return 'Lights Toggle';
+                default: return '-';
+            }
+        }
+
+        // Update speed value
+        function updateSpeed() {
+            state.speed = elements.speedSlider.value;
+            elements.speedValue.textContent = `${state.speed}%`;
+        }
+
+        // Handle keyboard controls
+        function handleKeyDown(e) {
+            if (!state.connected) return;
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                    sendCommand('forward');
+                    break;
+                case 'ArrowDown':
+                    sendCommand('backward');
+                    break;
+                case 'ArrowLeft':
+                    sendCommand('left');
+                    break;
+                case 'ArrowRight':
+                    sendCommand('right');
+                    break;
+                case ' ':
+                    sendCommand('stop');
+                    break;
+                case 'h':
+                    sendCommand('horn');
+                    break;
+                case 'l':
+                    sendCommand('lights');
+                    break;
+            }
+        }
+
+        function handleKeyUp(e) {
+            if (!state.connected) return;
+            
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                sendCommand('stop');
+            }
+        }
+
+        // Update connection status UI
+        function updateConnectionStatus() {
+            if (state.connected) {
+                elements.connectionStatus.classList.remove('bg-red-500');
+                elements.connectionStatus.classList.add('bg-green-500');
+                elements.connectionText.textContent = 'Connected';
+                elements.connectionText.nextElementSibling.textContent = state.deviceIp;
+            } else {
+                elements.connectionStatus.classList.remove('bg-green-500');
+                elements.connectionStatus.classList.add('bg-red-500');
+                elements.connectionText.textContent = 'Disconnected';
+                elements.connectionText.nextElementSibling.textContent = '';
+            }
+        }
+
+        // Load settings from localStorage
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('carRemoteSettings')) || {};
+            
+            state.controlMode = settings.controlMode || 'joystick';
+            state.apiEndpoint = settings.apiEndpoint || '/control';
+            state.enableVibration = settings.enableVibration || false;
+            
+            // Update UI
+            elements.controlMode.value = state.controlMode;
+            elements.apiEndpoint.value = state.apiEndpoint;
+            elements.enableVibration.checked = state.enableVibration;
+            elements.currentMode.textContent = `${state.controlMode.charAt(0).toUpperCase() + state.controlMode.slice(1)} Mode`;
+        }
+
+        // Save settings to localStorage
+        function saveSettings() {
+            state.controlMode = elements.controlMode.value;
+            state.apiEndpoint = elements.apiEndpoint.value;
+            state.enableVibration = elements.enableVibration.checked;
+            
+            const settings = {
+                controlMode: state.controlMode,
+                apiEndpoint: state.apiEndpoint,
+                enableVibration: state.enableVibration
+            };
+            
+            localStorage.setItem('carRemoteSettings', JSON.stringify(settings));
+            
+            elements.currentMode.textContent = `${state.controlMode.charAt(0).toUpperCase() + state.controlMode.slice(1)} Mode`;
+            elements.settingsModal.classList.add('hidden');
+            
+            showAlert('Settings saved', 'success');
+            
+            // Initialize gyroscope if selected
+            if (state.controlMode === 'gyro' && window.DeviceOrientationEvent) {
+                initGyroscope();
+            } else if (state.gyroActive) {
+                window.removeEventListener('deviceorientation', handleOrientation);
+                state.gyroActive = false;
+            }
+        }
+
+        // Check for mobile device features
+        function checkMobileFeatures() {
+            if (window.DeviceOrientationEvent) {
+                // Add gyroscope option if available
+                const gyroOption = document.createElement('option');
+                gyroOption.value = 'gyro';
+                gyroOption.textContent = 'Gyroscope (Mobile)';
+                elements.controlMode.appendChild(gyroOption);
+            }
+        }
+
+        // Initialize gyroscope controls
+        function initGyroscope() {
+            if (window.DeviceOrientationEvent) {
+                window.addEventListener('deviceorientation', handleOrientation);
+                state.gyroActive = true;
+                showAlert('Tilt your device to control the car', 'info');
+            } else {
+                showAlert('Gyroscope not available on this device', 'error');
+            }
+        }
+
+        function handleOrientation(event) {
+            if (!state.connected || state.controlMode !== 'gyro') return;
+            
+            // Use beta (front-to-back tilt) for forward/backward
+            // Use gamma (left-to-right tilt) for left/right
+            const beta = event.beta;  // -180 to 180
+            const gamma = event.gamma; // -90 to 90
+            
+            let command = 'stop';
+            
+            // Forward/backward control
+            if (beta < -20) {
+                command = 'forward';
+            } else if (beta > 20) {
+                command = 'backward';
+            }
+            
+            // Left/right control
+            if (gamma < -15) {
+                command = command === 'stop' ? 'left' : (command === 'forward' ? 'forward_left' : 'backward_left');
+            } else if (gamma > 15) {
+                command = command === 'stop' ? 'right' : (command === 'forward' ? 'forward_right' : 'backward_right');
+            }
+            
+            sendCommand(command);
+        }
+
+        // Start periodic status updates
+        function startStatusUpdates() {
+            // In a real app, you would periodically check device status
+            // For demo, we'll just update the UI
+            setInterval(() => {
+                if (state.connected) {
+                    // Simulate random battery level changes
+                    state.batteryLevel = Math.max(5, Math.min(100, state.batteryLevel + (Math.random() - 0.5)));
+                    elements.batteryLevel.innerHTML = `<i class="fas ${getBatteryIcon(state.batteryLevel)} mr-1"></i> ${Math.round(state.batteryLevel)}%`;
+                }
+            }, 5000);
+        }
+
+        function getBatteryIcon(level) {
+            if (level > 80) return 'fa-battery-full';
+            if (level > 60) return 'fa-battery-three-quarters';
+            if (level > 40) return 'fa-battery-half';
+            if (level > 20) return 'fa-battery-quarter';
+            return 'fa-battery-empty';
+        }
+
+        // Simulate battery drain for demo
+        function simulateBatteryDrain() {
+            setInterval(() => {
+                state.batteryLevel = Math.max(5, state.batteryLevel - 0.1);
+                elements.batteryLevel.innerHTML = `<i class="fas ${getBatteryIcon(state.batteryLevel)} mr-1"></i> ${Math.round(state.batteryLevel)}%`;
+            }, 60000);
+        }
+
+        // Show alert message
+        function showAlert(message, type = 'info') {
+            const alert = document.createElement('div');
+            alert.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-md shadow-lg text-white ${
+                type === 'error' ? 'bg-red-500' : 
+                type === 'success' ? 'bg-green-500' : 'bg-blue-500'
+            }`;
+            alert.textContent = message;
+            
+            document.body.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+                setTimeout(() => alert.remove(), 300);
+            }, 3000);
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

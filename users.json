@@ -1,0 +1,27 @@
+{
+    "try@gmail.com": {
+        "user_id": "5b076cd4-8fb7-48bb-9ad9-5ca4e0b1a92c",
+        "username": "try",
+        "password": "$pbkdf2-sha256$29000$k7JWqrVWak2plZIyBuA8Bw$BEr4F1wLPTxCNSl.EJQrB9Yq6Kt2gC4XxMMgF1ZQmlQ"
+    },
+    "nadhilken.10@gmail.com": {
+        "user_id": "6dad7d96-23bf-41a5-b6c1-e9972fb68ee6",
+        "username": "n_a_dh_l",
+        "password": "$pbkdf2-sha256$29000$AMC4N0YohVCq9d77H8O4Vw$AM374PvswhmpIToFZbzc6XRQ/KG3N/v4vvXxDtygHw0"
+    },
+    "sasi@gmail.com": {
+        "user_id": "8a13efaa-8e87-4011-a74d-144c73848eac",
+        "username": "sasi",
+        "password": "$pbkdf2-sha256$29000$Uoqxds4ZwzjnfK9VSundGw$YQPGd24qCwxr9TskNf5tnAlCEW6.dbvHvJZn2TirJ0Q"
+    },
+    "hr@hgmail.com": {
+        "user_id": "f4740aa9-216a-434c-a916-f53180658bee",
+        "username": "hr",
+        "password": "$pbkdf2-sha256$29000$856TslbKOSdEaO0dQ8i5tw$OKFk0Pcqv9GWnhwnmLJ3ueb1.bqGS1ujbwmnUirxroE"
+    },
+    "kaniskhakanis@gmail.com": {
+        "user_id": "6318a3c0-9b71-4789-9357-78c966123e3f",
+        "username": "kaniskha",
+        "password": "$pbkdf2-sha256$29000$MaYUIkRI6T2ndO4dw/jfuw$/5D1Xu1F6Jqr/bFVdhsVzmDnVAKk3y09KTaOlcfOw24"
+    }
+}

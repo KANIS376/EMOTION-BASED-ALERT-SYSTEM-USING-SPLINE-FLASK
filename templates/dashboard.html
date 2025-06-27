@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Loader styles */
+        .loader {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 5px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            transition: opacity 0.5s ease-out;
+        }
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .loading-text {
+            color: white;
+            font-size: 14pt;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .dot {
+            margin-left: 3px;
+            animation: blink 1.5s infinite;
+        }
+        .dot:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+        .dot:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+        .loading-bar-background {
+            --height: 30px;
+            display: flex;
+            align-items: center;
+            box-sizing: border-box;
+            padding: 5px;
+            width: 200px;
+            height: var(--height);
+            background-color: #4b5563;
+            box-shadow: #0c0c0c -2px 2px 4px 0px inset;
+            border-radius: calc(var(--height) / 2);
+        }
+        .loading-bar {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            --height: 20px;
+            width: 0%;
+            height: var(--height);
+            overflow: hidden;
+            background: rgb(222, 74, 15);
+            background: linear-gradient(
+                0deg,
+                rgba(222, 74, 15, 1) 0%,
+                rgba(249, 199, 79, 1) 100%
+            );
+            border-radius: calc(var(--height) / 2);
+            animation: loading 4s ease-out infinite;
+        }
+        .white-bars-container {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .white-bar {
+            background: rgb(255, 255, 255);
+            background: linear-gradient(
+                -45deg,
+                rgba(255, 255, 255, 1) 0%,
+                rgba(255, 255, 255, 0) 70%
+            );
+            width: 10px;
+            height: 45px;
+            opacity: 0.3;
+            rotate: 45deg;
+        }
+        @keyframes loading {
+            0% { width: 0; }
+            80% { width: 100%; }
+            100% { width: 100%; }
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+        /* Hide main content while loading */
+        .main-content {
+            display: none;
+        }
+        .main-content.loaded {
+            display: block;
+        }
+        /* Video feed styles */
+        .video-container {
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .video-feed {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        /* Button styles */
+        .dashboard-button {
+            display: inline-flex;
+            padding: 10px 20px;
+            background: #ffffff;
+            border-radius: 4px;
+            color: #1a1a2e;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background 0.2s, color 0.2s;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        .dashboard-button:hover {
+            background: #f5f5f5;
+            color: #0a0a1e;
+            text-decoration: underline;
+        }
+        /* Emotion display */
+        .emotion-display {
+            margin-top: 1rem;
+            text-align: center;
+            color: #1a1a2e;
+            font-size: 1.25rem;
+            font-weight: 500;
+        }
+        
+        /* Emotion bars */
+        .emotion-bar-container {
+            width: 100%;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        .emotion-bar {
+            height: 20px;
+            border-radius: 4px;
+            transition: width 0.5s ease-in-out;
+            position: relative;
+        }
+        .emotion-bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.875rem;
+            margin-bottom: 2px;
+        }
+        .emotion-bar-angry { background-color: #e53e3e; }
+        .emotion-bar-disgust { background-color: #805ad5; }
+        .emotion-bar-fear { background-color: #6b46c1; }
+        .emotion-bar-happy { background-color: #38a169; }
+        .emotion-bar-sad { background-color: #4299e1; }
+        .emotion-bar-surprise { background-color: #f6ad55; }
+        .emotion-bar-neutral { background-color: #718096; }
+        
+        /* Warning animation */
+        @keyframes pulse-warning {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .warning-pulse {
+            animation: pulse-warning 2s infinite;
+        }
+        
+        /* Happiness animation */
+        @keyframes pulse-happiness {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.4); }
+            50% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(72, 187, 120, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(72, 187, 120, 0); }
+        }
+        .happiness-pulse {
+            animation: pulse-happiness 3s ease-in-out infinite;
+            transition: all 0.3s ease;
+        }
+        .happiness-pulse:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <!-- Loader -->
+    <div class="loader">
+        <div class="loading-text">
+            Loading<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+        </div>
+        <div class="loading-bar-background">
+            <div class="loading-bar">
+                <div class="white-bars-container">
+                    <div class="white-bar"></div>
+                    <div class="white-bar"></div>
+                    <div class="white-bar"></div>
+                    <div class="white-bar"></div>
+                    <div class="white-bar"></div>
+                    <div class="white-bar"></div>
+                    <div class="white-bar"></div>
+                    <div class="white-bar"></div>
+                    <div class="white-bar"></div>
+                    <div class="white-bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Main content -->
+    <div class="w-full max-w-5xl main-content">
+        <h1 class="text-3xl font-bold text-gray-800 text-center mb-4">Emotion Detection Dashboard</h1>
+        
+        <div class="flex flex-wrap">
+            <!-- Left side: Video feed -->
+            <div class="w-full md:w-2/3 pr-0 md:pr-4">
+                <div class="video-container">
+                    <img src="{{ url_for('video_feed') }}" class="video-feed" alt="Video Feed">
+                </div>
+                <div class="emotion-display" id="emotion-display">Detecting emotion...</div>
+            </div>
+            
+            <!-- Right side: Emotion averages -->
+            <div class="w-full md:w-1/3 mt-4 md:mt-0">
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-3">Emotion Averages</h2>
+                    <div id="emotion-averages" class="space-y-2">
+                        <!-- Emotion bars will be added here dynamically -->
+                    </div>
+                    
+                    <!-- Warning alert for high sadness -->
+                    <div id="sadness-warning" class="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative hidden">
+                        <strong class="font-bold">Warning!</strong>
+                        <span class="block sm:inline"> High sadness levels detected.</span>
+                        <div class="mt-2">
+                            <span class="font-semibold">Warning count: </span>
+                            <span id="warning-count">0</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Warning alert for high fear -->
+                    <div id="fear-warning" class="mt-4 bg-purple-100 border border-purple-400 text-purple-700 px-4 py-3 rounded relative hidden">
+                        <strong class="font-bold">Warning!</strong>
+                        <span class="block sm:inline"> High fear levels detected.</span>
+                        <div class="mt-2">
+                            <span class="font-semibold">Warning count: </span>
+                            <span id="fear-warning-count">0</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Warning alert for high disgust -->
+                    <div id="disgust-warning" class="mt-4 bg-indigo-100 border border-indigo-400 text-indigo-700 px-4 py-3 rounded relative hidden">
+                        <strong class="font-bold">Warning!</strong>
+                        <span class="block sm:inline"> High disgust levels detected.</span>
+                        <div class="mt-2">
+                            <span class="font-semibold">Warning count: </span>
+                            <span id="disgust-warning-count">0</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Warning alert for high anger -->
+                    <div id="angry-warning" class="mt-4 bg-orange-100 border border-orange-400 text-orange-700 px-4 py-3 rounded relative hidden">
+                        <strong class="font-bold">Warning!</strong>
+                        <span class="block sm:inline"> High anger levels detected.</span>
+                        <div class="mt-2">
+                            <span class="font-semibold">Warning count: </span>
+                            <span id="angry-warning-count">0</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Positive message for high happiness -->
+                    <div id="happiness-message" class="mt-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative hidden">
+                        <div class="flex items-center">
+                            <svg class="w-6 h-6 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                            <strong class="font-bold text-lg">Great job!</strong>
+                        </div>
+                        <span class="block sm:inline text-lg mt-1"> You're showing high levels of happiness!</span>
+                        <div class="mt-3 text-green-600">
+                            <span class="block">Keep up the positive energy! Happiness is linked to:</span>
+                            <ul class="list-disc ml-5 mt-2">
+                                <li>Better physical health</li>
+                                <li>Increased productivity</li>
+                                <li>Stronger relationships</li>
+                                <li>Enhanced creativity</li>
+                            </ul>
+                            <div class="mt-2 italic">
+                                "Happiness is not something ready-made. It comes from your own actions." - Dalai Lama
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="#" id="logout-btn" class="dashboard-button">Logout</a>
+        </div>
+    </div>
+
+    <!-- JavaScript to handle loader and emotion saving -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loader = document.querySelector('.loader');
+            const mainContent = document.querySelector('.main-content');
+            const videoFeed = document.querySelector('.video-feed');
+            const emotionDisplay = document.querySelector('#emotion-display');
+            const emotionAveragesContainer = document.querySelector('#emotion-averages');
+            
+            // Warning elements
+            const sadnessWarning = document.querySelector('#sadness-warning');
+            const fearWarning = document.querySelector('#fear-warning');
+            const disgustWarning = document.querySelector('#disgust-warning');
+            const angryWarning = document.querySelector('#angry-warning');
+            
+            // Happiness message element
+            const happinessMessage = document.querySelector('#happiness-message');
+            
+            // Warning count displays
+            const warningCountDisplay = document.querySelector('#warning-count');
+            const fearWarningCountDisplay = document.querySelector('#fear-warning-count');
+            const disgustWarningCountDisplay = document.querySelector('#disgust-warning-count');
+            const angryWarningCountDisplay = document.querySelector('#angry-warning-count');
+            
+            // Emotion labels and colors
+            const emotions = [
+                { name: 'angry', label: 'Angry', color: '#e53e3e' },
+                { name: 'disgust', label: 'Disgust', color: '#805ad5' },
+                { name: 'fear', label: 'Fear', color: '#6b46c1' },
+                { name: 'happy', label: 'Happy', color: '#38a169' },
+                { name: 'sad', label: 'Sad', color: '#4299e1' },
+                { name: 'surprise', label: 'Surprise', color: '#f6ad55' },
+                { name: 'neutral', label: 'Neutral', color: '#718096' }
+            ];
+            
+            // Initialize emotion averages
+            let emotionAverages = {};
+            emotions.forEach(emotion => {
+                emotionAverages[emotion.name] = 0;
+            });
+            
+            // Number of emotion readings to calculate average
+            const maxReadings = 10;
+            let emotionReadings = [];
+            
+            // Warning count tracking
+            let warningCount = 0;
+            let fearWarningCount = 0;
+            let disgustWarningCount = 0;
+            let angryWarningCount = 0;
+            
+            // Warning state tracking
+            let lastWarningState = false;
+            let lastFearWarningState = false;
+            let lastDisgustWarningState = false;
+            let lastAngryWarningState = false;
+            
+            // Happiness state tracking
+            let lastHappinessState = false;
+            
+            // Function to fetch session info including warning count
+            function fetchSessionInfo() {
+                fetch('/get_session_info')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch session info');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success && data.data) {
+                            // Update all warning counts if they have changed
+                            if (warningCount !== data.data.warning_count) {
+                                warningCount = data.data.warning_count;
+                                if (warningCountDisplay) {
+                                    warningCountDisplay.textContent = warningCount;
+                                }
+                                console.log('Updated sadness warning count from server:', warningCount);
+                            }
+                            
+                            // Update fear warning count if available
+                            if (data.data.fear_warning_count !== undefined && fearWarningCount !== data.data.fear_warning_count) {
+                                fearWarningCount = data.data.fear_warning_count;
+                                if (fearWarningCountDisplay) {
+                                    fearWarningCountDisplay.textContent = fearWarningCount;
+                                }
+                                console.log('Updated fear warning count from server:', fearWarningCount);
+                            }
+                            
+                            // Update disgust warning count if available
+                            if (data.data.disgust_warning_count !== undefined && disgustWarningCount !== data.data.disgust_warning_count) {
+                                disgustWarningCount = data.data.disgust_warning_count;
+                                if (disgustWarningCountDisplay) {
+                                    disgustWarningCountDisplay.textContent = disgustWarningCount;
+                                }
+                                console.log('Updated disgust warning count from server:', disgustWarningCount);
+                            }
+                            
+                            // Update angry warning count if available
+                            if (data.data.angry_warning_count !== undefined && angryWarningCount !== data.data.angry_warning_count) {
+                                angryWarningCount = data.data.angry_warning_count;
+                                if (angryWarningCountDisplay) {
+                                    angryWarningCountDisplay.textContent = angryWarningCount;
+                                }
+                                console.log('Updated angry warning count from server:', angryWarningCount);
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching session info:', error);
+                    });
+            }
+            
+            // Fetch initial session info
+            fetchSessionInfo();
+            
+            // Periodically refresh session info every 30 seconds
+            setInterval(fetchSessionInfo, 30000);
+
+            const hideLoader = () => {
+                loader.classList.add('hidden');
+                mainContent.classList.add('loaded');
+            };
+
+            // Fallback: Hide loader after 3 seconds
+            setTimeout(hideLoader, 3000);
+
+            if (videoFeed) {
+                videoFeed.addEventListener('load', () => {
+                    hideLoader();
+                    initEmotionBars();
+                    startEmotionPolling();
+                });
+                videoFeed.addEventListener('error', hideLoader);
+            }
+            
+            // Initialize emotion bars
+            function initEmotionBars() {
+                emotionAveragesContainer.innerHTML = '';
+                emotions.forEach(emotion => {
+                    const barContainer = document.createElement('div');
+                    barContainer.innerHTML = `
+                        <div class="emotion-bar-label">
+                            <span>${emotion.label}</span>
+                            <span id="${emotion.name}-value">0%</span>
+                        </div>
+                        <div class="emotion-bar-container">
+                            <div id="${emotion.name}-bar" class="emotion-bar emotion-bar-${emotion.name}" style="width: 0%"></div>
+                        </div>
+                    `;
+                    emotionAveragesContainer.appendChild(barContainer);
+                });
+            }
+            
+            // Update emotion bars - improved for better display
+            function updateEmotionBars() {
+                emotions.forEach(emotion => {
+                    const value = emotionAverages[emotion.name];
+                    const bar = document.getElementById(`${emotion.name}-bar`);
+                    const valueDisplay = document.getElementById(`${emotion.name}-value`);
+                    
+                    if (bar && valueDisplay) {
+                        // Ensure value is a valid number
+                        const displayValue = isNaN(value) ? 0 : value;
+                        
+                        // Ensure the bar width is between 0-100%
+                        const clampedValue = Math.max(0, Math.min(100, displayValue));
+                        bar.style.width = `${clampedValue}%`;
+                        
+                        // Format the display value with 1 decimal place
+                        valueDisplay.textContent = `${displayValue.toFixed(1)}%`;
+                        
+                        // Add a data attribute for debugging
+                        bar.setAttribute('data-raw-value', value);
+                    }
+                });
+                
+                // Check emotion levels and show warnings if above threshold (70%)
+                const sadValue = emotionAverages.sad || 0;
+                const fearValue = emotionAverages.fear || 0;
+                const disgustValue = emotionAverages.disgust || 0;
+                const angryValue = emotionAverages.angry || 0;
+                
+                // Set warning thresholds
+                const warningThreshold = 70;
+                
+                // Check each emotion and update warnings
+                
+                // 1. Sadness warning
+                const isSadnessWarningActive = sadValue > warningThreshold;
+                if (isSadnessWarningActive) {
+                    sadnessWarning.classList.remove('hidden');
+                    sadnessWarning.classList.add('warning-pulse');
+                    
+                    // If this is a new warning (state changed from false to true)
+                    if (!lastWarningState) {
+                        warningCount++;
+                        console.log(`Sadness warning triggered! Count: ${warningCount}`);
+                        
+                        // Update warning count display
+                        if (warningCountDisplay) {
+                            warningCountDisplay.textContent = warningCount;
+                        }
+                        
+                        // Save warning count to server
+                        fetch('/save_warning', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                warningCount: warningCount,
+                                warningType: 'sad'
+                            })
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                return response.json().then(data => {
+                                    throw new Error(data.message || 'Failed to save warning count');
+                                });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Sadness warning count saved successfully:', data);
+                            // Update warning count from server response if available
+                            if (data.warning_count !== undefined) {
+                                warningCount = data.warning_count;
+                                if (warningCountDisplay) {
+                                    warningCountDisplay.textContent = warningCount;
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error saving sadness warning count:', error);
+                            // Retry saving warning count after a short delay
+                            setTimeout(() => {
+                                fetch('/save_warning', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ 
+                                        warningCount: warningCount,
+                                        warningType: 'sad'
+                                    })
+                                })
+                                .then(response => response.json())
+                                .then(data => console.log('Retry result:', data))
+                                .catch(err => console.error('Retry failed:', err));
+                            }, 2000);
+                        });
+                    }
+                } else {
+                    sadnessWarning.classList.add('hidden');
+                    sadnessWarning.classList.remove('warning-pulse');
+                }
+                
+                // 2. Fear warning
+                const isFearWarningActive = fearValue > warningThreshold;
+                if (isFearWarningActive) {
+                    fearWarning.classList.remove('hidden');
+                    fearWarning.classList.add('warning-pulse');
+                    
+                    // If this is a new warning (state changed from false to true)
+                    if (!lastFearWarningState) {
+                        fearWarningCount++;
+                        console.log(`Fear warning triggered! Count: ${fearWarningCount}`);
+                        
+                        // Update warning count display
+                        if (fearWarningCountDisplay) {
+                            fearWarningCountDisplay.textContent = fearWarningCount;
+                        }
+                        
+                        // Save warning count to server
+                        fetch('/save_warning', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                warningCount: fearWarningCount,
+                                warningType: 'fear'
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Fear warning count saved successfully:', data);
+                            if (data.fear_warning_count !== undefined) {
+                                fearWarningCount = data.fear_warning_count;
+                                if (fearWarningCountDisplay) {
+                                    fearWarningCountDisplay.textContent = fearWarningCount;
+                                }
+                            }
+                        })
+                        .catch(error => console.error('Error saving fear warning count:', error));
+                    }
+                } else {
+                    fearWarning.classList.add('hidden');
+                    fearWarning.classList.remove('warning-pulse');
+                }
+                
+                // 3. Disgust warning
+                const isDisgustWarningActive = disgustValue > warningThreshold;
+                if (isDisgustWarningActive) {
+                    disgustWarning.classList.remove('hidden');
+                    disgustWarning.classList.add('warning-pulse');
+                    
+                    // If this is a new warning (state changed from false to true)
+                    if (!lastDisgustWarningState) {
+                        disgustWarningCount++;
+                        console.log(`Disgust warning triggered! Count: ${disgustWarningCount}`);
+                        
+                        // Update warning count display
+                        if (disgustWarningCountDisplay) {
+                            disgustWarningCountDisplay.textContent = disgustWarningCount;
+                        }
+                        
+                        // Save warning count to server
+                        fetch('/save_warning', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                warningCount: disgustWarningCount,
+                                warningType: 'disgust'
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Disgust warning count saved successfully:', data);
+                            if (data.disgust_warning_count !== undefined) {
+                                disgustWarningCount = data.disgust_warning_count;
+                                if (disgustWarningCountDisplay) {
+                                    disgustWarningCountDisplay.textContent = disgustWarningCount;
+                                }
+                            }
+                        })
+                        .catch(error => console.error('Error saving disgust warning count:', error));
+                    }
+                } else {
+                    disgustWarning.classList.add('hidden');
+                    disgustWarning.classList.remove('warning-pulse');
+                }
+                
+                // 4. Anger warning
+                const isAngryWarningActive = angryValue > warningThreshold;
+                if (isAngryWarningActive) {
+                    angryWarning.classList.remove('hidden');
+                    angryWarning.classList.add('warning-pulse');
+                    
+                    // If this is a new warning (state changed from false to true)
+                    if (!lastAngryWarningState) {
+                        angryWarningCount++;
+                        console.log(`Anger warning triggered! Count: ${angryWarningCount}`);
+                        
+                        // Update warning count display
+                        if (angryWarningCountDisplay) {
+                            angryWarningCountDisplay.textContent = angryWarningCount;
+                        }
+                        
+                        // Save warning count to server
+                        fetch('/save_warning', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                warningCount: angryWarningCount,
+                                warningType: 'angry'
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Anger warning count saved successfully:', data);
+                            if (data.angry_warning_count !== undefined) {
+                                angryWarningCount = data.angry_warning_count;
+                                if (angryWarningCountDisplay) {
+                                    angryWarningCountDisplay.textContent = angryWarningCount;
+                                }
+                            }
+                        })
+                        .catch(error => console.error('Error saving anger warning count:', error));
+                    }
+                } else {
+                    angryWarning.classList.add('hidden');
+                    angryWarning.classList.remove('warning-pulse');
+                }
+                
+                // Check happiness level and show positive message if above 65%
+                // Also check that negative emotions are low to ensure it's genuine happiness
+                const happyValue = emotionAverages.happy || 0;
+                
+                // Happiness is active if happiness is high AND negative emotions are relatively low
+                const isHappinessActive = happyValue > 65 && sadValue < 30 && angryValue < 30 && fearValue < 30;
+                
+                if (isHappinessActive) {
+                    happinessMessage.classList.remove('hidden');
+                    happinessMessage.classList.add('happiness-pulse');
+                    
+                    // Log happiness detection
+                    if (!lastHappinessState) {
+                        console.log(`High happiness detected! Value: ${happyValue.toFixed(1)}%`);
+                        
+                        // Update the emotion display with a positive message
+                        if (emotionDisplay) {
+                            const currentText = emotionDisplay.textContent;
+                            if (!currentText.includes('😊')) {
+                                emotionDisplay.textContent = `${currentText} 😊`;
+                            }
+                        }
+                    }
+                } else {
+                    happinessMessage.classList.add('hidden');
+                    happinessMessage.classList.remove('happiness-pulse');
+                    
+                    // Remove emoji from emotion display if happiness state changed
+                    if (lastHappinessState && emotionDisplay) {
+                        const currentText = emotionDisplay.textContent;
+                        emotionDisplay.textContent = currentText.replace(' 😊', '');
+                    }
+                }
+                
+                // Update all states
+                lastWarningState = isSadnessWarningActive;
+                lastFearWarningState = isFearWarningActive;
+                lastDisgustWarningState = isDisgustWarningActive;
+                lastAngryWarningState = isAngryWarningActive;
+                lastHappinessState = isHappinessActive;
+            }
+            
+            // Calculate averages from readings - improved for accuracy
+            function calculateAverages() {
+                // Reset averages
+                emotions.forEach(emotion => {
+                    emotionAverages[emotion.name] = 0;
+                });
+                
+                // Skip if no readings
+                if (emotionReadings.length === 0) return;
+                
+                // Fetch server-side averages for more accuracy
+                fetch('/get_session_averages')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.data) {
+                            // Use server-side averages which are more accurate
+                            console.log('Using server-side emotion averages:', data.data);
+                            
+                            // Update our local averages with server data
+                            emotions.forEach(emotion => {
+                                if (data.data[emotion.name] !== undefined) {
+                                    emotionAverages[emotion.name] = data.data[emotion.name];
+                                }
+                            });
+                            
+                            // Update the UI with these more accurate averages
+                            updateEmotionBars();
+                        } else {
+                            // Fall back to client-side calculation if server data isn't available
+                            calculateLocalAverages();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching server averages:', error);
+                        // Fall back to client-side calculation
+                        calculateLocalAverages();
+                    });
+            }
+            
+            // Calculate averages locally as a fallback
+            function calculateLocalAverages() {
+                // Count occurrences of each emotion
+                const emotionCounts = {};
+                emotions.forEach(emotion => {
+                    emotionCounts[emotion.name] = 0;
+                });
+                
+                // Calculate sum for each emotion
+                emotionReadings.forEach(reading => {
+                    emotions.forEach(emotion => {
+                        // If this is the current emotion, add its confidence
+                        if (reading.emotion === emotion.name) {
+                            emotionAverages[emotion.name] += reading.confidence;
+                            emotionCounts[emotion.name]++;
+                        }
+                    });
+                });
+                
+                // Calculate average
+                emotions.forEach(emotion => {
+                    if (emotionCounts[emotion.name] > 0) {
+                        emotionAverages[emotion.name] = emotionAverages[emotion.name] / emotionCounts[emotion.name];
+                    }
+                });
+                
+                updateEmotionBars();
+            }
+
+            // Poll for emotions and save them - improved for reliability
+            function startEmotionPolling() {
+                // Initial fetch of server averages to ensure we start with accurate data
+                fetch('/get_session_averages')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.data) {
+                            console.log('Initial emotion averages from server:', data.data);
+                            // Update our local averages with server data
+                            emotions.forEach(emotion => {
+                                if (data.data[emotion.name] !== undefined) {
+                                    emotionAverages[emotion.name] = data.data[emotion.name];
+                                }
+                            });
+                            updateEmotionBars();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching initial averages:', error);
+                    });
+                
+                // Regular polling for emotion updates
+                const pollingInterval = setInterval(async () => {
+                    try {
+                        // Check if the page is still visible/active
+                        if (document.hidden) {
+                            console.log('Page is hidden, skipping emotion poll');
+                            return;
+                        }
+                        
+                        const response = await fetch('/get_emotion');
+                        if (!response.ok) {
+                            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        const result = await response.json();
+                        if (result.success && result.data && result.data.emotion !== 'none') {
+                            // Update UI with current emotion
+                            const emotionName = result.data.emotion;
+                            const confidence = parseFloat(result.data.confidence);
+                            
+                            // Validate the data
+                            if (!emotionName || isNaN(confidence)) {
+                                console.warn('Invalid emotion data received:', result.data);
+                                return;
+                            }
+                            
+                            // Update the emotion display
+                            emotionDisplay.textContent = `Emotion: ${emotionName} (${confidence.toFixed(1)}%)`;
+                            
+                            // Add to readings for real-time average calculation
+                            emotionReadings.push({
+                                emotion: emotionName,
+                                confidence: confidence,
+                                timestamp: new Date().toISOString()
+                            });
+                            
+                            // Keep only the last maxReadings
+                            if (emotionReadings.length > maxReadings) {
+                                emotionReadings.shift();
+                            }
+                            
+                            // Calculate and update averages in real-time
+                            calculateAverages();
+                            
+                            // Save emotion to server
+                            try {
+                                const saveResponse = await fetch('/save_emotion', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        emotion: emotionName,
+                                        confidence: confidence
+                                    })
+                                });
+                                
+                                if (!saveResponse.ok) {
+                                    throw new Error(`Server returned ${saveResponse.status}`);
+                                }
+                                
+                                const saveResult = await saveResponse.json();
+                                if (!saveResult.success) {
+                                    console.error('Failed to save emotion:', saveResult.message);
+                                }
+                            } catch (saveError) {
+                                console.error('Error saving emotion to server:', saveError);
+                            }
+                        } else if (result.success) {
+                            emotionDisplay.textContent = 'No emotion detected';
+                        } else {
+                            throw new Error('Invalid response format');
+                        }
+                    } catch (error) {
+                        console.error('Error in emotion polling:', error);
+                        emotionDisplay.textContent = 'Error detecting emotion';
+                    }
+                }, 1000); // Poll every 1 second
+                
+                // Clean up interval on page unload
+                window.addEventListener('beforeunload', () => {
+                    clearInterval(pollingInterval);
+                });
+            }
+        });
+        
+        // Handle logout button click - using a simpler approach to ensure it works
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Logout button clicked');
+                
+                try {
+                    // Simple approach: just redirect to logout
+                    window.location.href = '/logout';
+                } catch (error) {
+                    console.error('Error during logout:', error);
+                    // Fallback: try a direct navigation
+                    window.location = '/logout';
+                }
+            });
+        } else {
+            console.error('Logout button not found in the DOM');
+        }
+        
+    </script>
+</body>
+</html>
